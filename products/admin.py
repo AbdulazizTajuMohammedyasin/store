@@ -29,8 +29,9 @@ class ProductAdmin(admin.ModelAdmin):
 class CustomerAdmin(admin.ModelAdmin):
     search_fields = ['first_name']
     list_display =['first_name', 'last_name', 'membership','orders']
+    list_select_related = ['user']
     list_editable = ['membership']
-    ordering = ['first_name', 'last_name']
+    ordering = ['user__first_name', 'user__last_name']
     @admin.display(ordering='orders_count', description='Orders')
     def orders(self, obj):
         url = (
@@ -38,6 +39,7 @@ class CustomerAdmin(admin.ModelAdmin):
             + f"?customer__id__exact={obj.id}"
         )
         return format_html('<a href="{}">{}</a>', url, obj.orders_count)
+    
     def get_queryset(self, request):
         return super().get_queryset(request).annotate(orders_count= Count('order'))
     

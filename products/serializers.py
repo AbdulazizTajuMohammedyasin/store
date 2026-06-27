@@ -1,11 +1,24 @@
 from rest_framework import serializers
-from .models import Product, Collection, Cart, CartItem
+from .models import Product, Collection, Cart, CartItem, Customer, Order, OrderItem
+from django.db import transaction
 
 class ProductSerializer(serializers.ModelSerializer):
     collection = serializers.StringRelatedField()
     class Meta:
         model = Product
-        fields = ['id','title','description', 'collection'] 
+        fields = ['id','title','description', 'price', 'collection'] 
+
+class ProductCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = [
+            'id',
+            'title',
+            'description',
+            'inventory',
+            'price',
+            'collection'
+        ]
     
 class CollectionSerializer(serializers.ModelSerializer):
     featured_product = serializers.StringRelatedField()
@@ -72,3 +85,63 @@ class UpdateCartItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = CartItem
         fields = ['quantity']
+        
+class CustomerSerializer(serializers.ModelSerializer):
+    user_id = serializers.IntegerField(read_only=True)
+     
+    class Meta:
+         model = Customer
+         fields = ['id', 'user_id', 'membership', 'birth_date', 'phone']
+         
+class OrderItemSerializer(serializers.ModelSerializer):
+    
+    product = ProductSerializer1()
+    class Meta:
+        model = OrderItem
+        fields = ['id', 'product', 'quantity', 'unit_price']
+         
+class OrderSerializer(serializers.ModelSerializer):
+    
+    items = OrderItemSerializer(many=True, source='orderitem_set', read_only=True)
+    class Meta:
+        model = Order
+        fields = ['id', 'placed_at', 'payment_status', 'customer', 'items']
+        
+class OrderCreateSerializer(serializers.Serializer):
+    cart_id = serializers.UUIDField()
+    
+    def validate_cart_id(self, cart_id):
+        if not Cart.objects.filter(pk=cart_id).exists():
+            raise serializers.ValidationError("Cart does not exist.")
+
+        if not CartItem.objects.filter(cart_id=cart_id).exists():
+            raise serializers.ValidationError("Cart is empty.")
+
+        return cart_id
+    
+    def save(self, **kwargs):
+        customer = Customer.objects.get(user_id=self.context['user_id'])
+        cart_id = self.validated_data['cart_id']
+        
+        with transaction.atomic():
+            order = Order.objects.create(customer=customer)
+            cart_items = CartItem.objects.select_related('product').filter(cart_id = cart_id )
+            
+            order_items = [
+                OrderItem(
+                    order=order,
+                    product=item.product,
+                    quantity=item.quantity,
+                    unit_price=item.product.price
+                )
+                for item in cart_items
+            ]
+            OrderItem.objects.bulk_create(order_items)
+            Cart.objects.filter(pk=cart_id).delete()
+            
+            return order 
+       
+class OrderUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Order
+        fields = ['payment_status']
