@@ -1,12 +1,21 @@
 from rest_framework import serializers
-from .models import Product, Collection, Cart, CartItem, Customer, Order, OrderItem
+from .models import Product, Collection, Cart, CartItem, Customer, Order, OrderItem, ProductImage
 from django.db import transaction
+
+class ProductImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImage
+        fields = ['id', 'image']
+        
+    def create(self, validated_data):
+        return ProductImage.objects.create(product_id=self.context['product_id'], **validated_data)
 
 class ProductSerializer(serializers.ModelSerializer):
     collection = serializers.StringRelatedField()
+    images = ProductImageSerializer(many=True, source='productimage_set', read_only=True )
     class Meta:
         model = Product
-        fields = ['id','title','description', 'price', 'collection'] 
+        fields = ['id','title','description', 'price', 'collection','images'] 
 
 class ProductCreateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -145,3 +154,4 @@ class OrderUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ['payment_status']
+        

@@ -27,6 +27,10 @@ class Product(models.Model):
         return self.title
     class Meta:
         ordering = ['title']
+        
+class ProductImage(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='product/images')
 
 class Customer(models.Model):
     CHOICE = [('B', 'Bronze'),('S', 'Silver'),('G', 'Gold')]

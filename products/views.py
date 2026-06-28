@@ -9,13 +9,12 @@ from .permissions import IsAdminOrReadOnly
 from rest_framework import status
 from rest_framework.response import Response 
 from rest_framework.filters import SearchFilter, OrderingFilter
-from .serializers import ProductSerializer, ProductCreateSerializer, CollectionSerializer, CartSerializer, CartItemSerializer, AddCartItemSerializer, UpdateCartItemSerializer, CustomerSerializer, OrderSerializer, OrderCreateSerializer, OrderUpdateSerializer
-from .models import Product, Collection, Cart, CartItem, Customer, Order
+from .serializers import ProductSerializer, ProductCreateSerializer, CollectionSerializer, CartSerializer, CartItemSerializer, AddCartItemSerializer, UpdateCartItemSerializer, CustomerSerializer, OrderSerializer, OrderCreateSerializer, OrderUpdateSerializer, ProductImageSerializer
+from .models import Product, Collection, Cart, CartItem, Customer, Order, ProductImage
 
 
 class ProductViewSet(ModelViewSet):
-    queryset = Product.objects.all()
-    #serializer_class = ProductSerializer
+    queryset = Product.objects.prefetch_related('productimage_set').all()
     permission_classes = [IsAdminOrReadOnly]
     filter_backends = [
         DjangoFilterBackend,
@@ -138,3 +137,12 @@ class OrderViewSet(ModelViewSet):
         
         customer = Customer.objects.get(user_id=self.request.user.id)
         return Order.objects.prefetch_related("orderitem_set__product").filter(customer=customer)    
+    
+class ProductImageViewSet(ModelViewSet):
+    serializer_class = ProductImageSerializer
+    
+    def get_queryset(self):
+        return ProductImage.objects.filter(product_id=self.kwargs['product_pk'])
+    
+    def get_serializer_context(self):
+        return {'product_id':self.kwargs['product_pk']}
