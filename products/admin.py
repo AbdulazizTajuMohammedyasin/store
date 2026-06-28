@@ -15,13 +15,28 @@ class TagInline(GenericStackedInline):
     autocomplete_fields = ['tag']
     extra = 1
 
+class ImageInline(admin.TabularInline):
+    model = ProductImage
+    extra = 1
+    readonly_fields = ['thumbnail']
+
+    def thumbnail(self, obj):
+        if obj.image:
+            return format_html(
+                '<img src="{}" width="100" />',
+                obj.image.url
+            )
+        return "No image"
+
+    thumbnail.short_description = "Preview"
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     search_fields = ['title']
     list_display = ['title','price']
     date_hierarchy = 'last_update' 
     list_editable = ['price']
-    inlines=[TagInline]
+    inlines = [TagInline, ImageInline]
     autocomplete_fields = ['collection']
     
 
