@@ -166,6 +166,7 @@ class ReviewViewSet(ModelViewSet):
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context["product"] = Product.objects.get(id=self.kwargs["product_pk"])
-        context["customer"] = self.request.user.customer
+        if self.request.user.is_authenticated:
+            context["customer"] = self.request.user.customer
         return context
     
