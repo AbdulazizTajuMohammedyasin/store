@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
 from .serializers import ProductSerializer, ProductCreateSerializer, CollectionSerializer, CartSerializer, CartItemSerializer, AddCartItemSerializer, UpdateCartItemSerializer, CustomerSerializer, OrderSerializer, OrderCreateSerializer, OrderUpdateSerializer, ProductImageSerializer, ReviewSerializer
 from .models import Product, Collection, Cart, CartItem, Customer, Order, ProductImage, Review
+from .filters import ProductFilter
 
 
 class ProductViewSet(ModelViewSet):
@@ -21,9 +22,9 @@ class ProductViewSet(ModelViewSet):
         SearchFilter,
         OrderingFilter,
     ]
-    filterset_fields = ['collection']
+    filterset_class = ProductFilter
     search_fields = ['title', 'description']
-    ordering_fields = ['last_update', 'title']
+    ordering_fields = ['last_update', 'title', 'price']
     
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
