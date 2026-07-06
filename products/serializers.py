@@ -134,7 +134,20 @@ class OrderCreateSerializer(serializers.Serializer):
         
         with transaction.atomic():
             order = Order.objects.create(customer=customer)
-            cart_items = CartItem.objects.select_related('product').filter(cart_id = cart_id )
+            cart_items = CartItem.objects.select_related('product').select_for_update().filter(cart_id = cart_id )
+            
+            #check the inventory
+            for item in cart_items:
+                if item.product.inventory < item.quantity:
+                    raise serializers.ValidationError(
+                        f"{item.product.title} does not have enough stock."
+                    )
+
+            # Deduct inventory
+            for item in cart_items:
+                item.product.inventory -= item.quantity
+                item.product.save()
+            
             
             order_items = [
                 OrderItem(
@@ -145,6 +158,7 @@ class OrderCreateSerializer(serializers.Serializer):
                 )
                 for item in cart_items
             ]
+            
             OrderItem.objects.bulk_create(order_items)
             Cart.objects.filter(pk=cart_id).delete()
             
