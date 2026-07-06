@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Product, Collection, Cart, CartItem, Customer, Order, OrderItem, ProductImage
+from .models import Product, Collection, Cart, CartItem, Customer, Order, OrderItem, ProductImage, Review
 from django.db import transaction
 
 class ProductImageSerializer(serializers.ModelSerializer):
@@ -169,3 +169,46 @@ class OrderUpdateSerializer(serializers.ModelSerializer):
         model = Order
         fields = ['payment_status']
         
+class ReviewSerializer(serializers.ModelSerializer):
+    
+    reviewed_by = serializers.CharField(
+        source='customer.user.username',
+        read_only=True
+    )
+    
+    class Meta:
+        model = Review
+        fields = ["id","rating","comment","created_at","reviewed_by"]
+        read_only_fields = ["created_at"]
+    
+    def get_customer(self):
+        return self.context["customer"]
+
+    def get_product(self):
+        return self.context["product"]
+        
+    
+    def validate(self, attrs):
+        customer = self.get_customer()
+        product = self.get_product()
+        
+        if self.context["request"].method == "POST" and Review.objects.filter(
+            product=product,
+            customer=customer
+        ).exists():
+            raise serializers.ValidationError({
+            "detail": "You have already reviewed this product. Update the existing review instead."
+            })
+
+        return attrs
+
+    def create(self, validated_data):
+        customer = self.get_customer()
+
+        product = self.get_product()
+
+        return Review.objects.create(
+            product=product,
+            customer=customer,
+            **validated_data
+        )

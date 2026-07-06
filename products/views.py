@@ -4,13 +4,13 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.viewsets import ModelViewSet, GenericViewSet
 from rest_framework.mixins import DestroyModelMixin, CreateModelMixin, RetrieveModelMixin, ListModelMixin, UpdateModelMixin
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from .permissions import IsAdminOrReadOnly
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, IsAuthenticatedOrReadOnly
+from .permissions import IsAdminOrReadOnly, IsReviewOwner
 from rest_framework import status
 from rest_framework.response import Response 
 from rest_framework.filters import SearchFilter, OrderingFilter
-from .serializers import ProductSerializer, ProductCreateSerializer, CollectionSerializer, CartSerializer, CartItemSerializer, AddCartItemSerializer, UpdateCartItemSerializer, CustomerSerializer, OrderSerializer, OrderCreateSerializer, OrderUpdateSerializer, ProductImageSerializer
-from .models import Product, Collection, Cart, CartItem, Customer, Order, ProductImage
+from .serializers import ProductSerializer, ProductCreateSerializer, CollectionSerializer, CartSerializer, CartItemSerializer, AddCartItemSerializer, UpdateCartItemSerializer, CustomerSerializer, OrderSerializer, OrderCreateSerializer, OrderUpdateSerializer, ProductImageSerializer, ReviewSerializer
+from .models import Product, Collection, Cart, CartItem, Customer, Order, ProductImage, Review
 
 
 class ProductViewSet(ModelViewSet):
@@ -146,3 +146,26 @@ class ProductImageViewSet(ModelViewSet):
     
     def get_serializer_context(self):
         return {'product_id':self.kwargs['product_pk']}
+    
+class ReviewViewSet(ModelViewSet):
+    serializer_class = ReviewSerializer
+    def get_permissions(self):
+        if self.action in ["update", "partial_update", "destroy"]:
+            return [IsAuthenticated(), IsReviewOwner()]
+
+        return [IsAuthenticatedOrReadOnly()]
+        
+
+    def get_queryset(self):
+        return Review.objects.select_related(
+        'customer',
+        'customer__user').filter(
+            product_id=self.kwargs["product_pk"]
+        )
+        
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["product"] = Product.objects.get(id=self.kwargs["product_pk"])
+        context["customer"] = self.request.user.customer
+        return context
+    
