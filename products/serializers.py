@@ -1,6 +1,9 @@
 from rest_framework import serializers
 from .models import Product, Collection, Cart, CartItem, Customer, Order, OrderItem, ProductImage, Review
 from django.db import transaction
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 class ProductImageSerializer(serializers.ModelSerializer):
     class Meta:
@@ -96,11 +99,85 @@ class UpdateCartItemSerializer(serializers.ModelSerializer):
         fields = ['quantity']
         
 class CustomerSerializer(serializers.ModelSerializer):
-    user_id = serializers.IntegerField(read_only=True)
-     
+    first_name = serializers.CharField(source='user.first_name')
+    last_name = serializers.CharField(source='user.last_name')
+    email = serializers.EmailField(source='user.email')
+    
+    membership = serializers.CharField(read_only=True)
+
+
     class Meta:
-         model = Customer
-         fields = ['id', 'user_id', 'membership', 'birth_date', 'phone']
+        model = Customer
+        fields = [
+            'id',
+            'first_name',
+            'last_name',
+            'email',
+            'phone',
+            'birth_date',
+            'membership'
+        ]
+        
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user', {})
+
+        user = instance.user
+        user.first_name = user_data.get(
+            'first_name',
+            user.first_name
+        )
+        user.last_name = user_data.get(
+            'last_name',
+            user.last_name
+        )
+        user.email = user_data.get(
+            'email',
+            user.email
+        )
+        user.save()
+
+        instance.phone = validated_data.get(
+            'phone',
+            instance.phone
+        )
+        instance.birth_date = validated_data.get(
+            'birth_date',
+            instance.birth_date
+        )
+        instance.save()
+
+        return instance
+    
+class CustomerAdminSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(
+        source='user.first_name',
+        read_only=True
+    )
+    last_name = serializers.CharField(
+        source='user.last_name',
+        read_only=True
+    )
+    email = serializers.EmailField(
+        source='user.email',
+        read_only=True
+    )
+
+    class Meta:
+        model = Customer
+        fields = [
+            'id',
+            'first_name',
+            'last_name',
+            'email',
+            'phone',
+            'birth_date',
+            'membership',
+        ]
+        read_only_fields = [
+            'id',
+            'phone',
+            'birth_date',
+        ]
          
 class OrderItemSerializer(serializers.ModelSerializer):
     

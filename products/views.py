@@ -9,7 +9,7 @@ from .permissions import IsAdminOrReadOnly, IsReviewOwner
 from rest_framework import status
 from rest_framework.response import Response 
 from rest_framework.filters import SearchFilter, OrderingFilter
-from .serializers import ProductSerializer, ProductCreateSerializer, CollectionSerializer, CartSerializer, CartItemSerializer, AddCartItemSerializer, UpdateCartItemSerializer, CustomerSerializer, OrderSerializer, OrderCreateSerializer, OrderUpdateSerializer, ProductImageSerializer, ReviewSerializer
+from .serializers import ProductSerializer, ProductCreateSerializer, CollectionSerializer, CartSerializer, CartItemSerializer, AddCartItemSerializer, UpdateCartItemSerializer, CustomerSerializer, OrderSerializer, OrderCreateSerializer, OrderUpdateSerializer, ProductImageSerializer, ReviewSerializer, CustomerAdminSerializer
 from .models import Product, Collection, Cart, CartItem, Customer, Order, ProductImage, Review
 from .filters import ProductFilter
 
@@ -89,18 +89,23 @@ class CartItemViewSet(ModelViewSet):
 
 class CustomerViewSet(ModelViewSet):
     
-    queryset = Customer.objects.all()
+    queryset = Customer.objects.select_related('user').all()
     serializer_class = CustomerSerializer
     permission_classes=[IsAdminUser]
     
-    @action(detail=False, methods=['GET', 'PUT'], permission_classes=[IsAuthenticated])
+    def get_serializer_class(self):
+        if self.action == 'me':
+            return CustomerSerializer
+        return CustomerAdminSerializer
+    
+    @action(detail=False, methods=['GET', 'PUT', 'PATCH'], permission_classes=[IsAuthenticated])
     def me(self, request):
         customer = Customer.objects.get(user_id= request.user.id)
         if request.method == 'GET':
             serializer = CustomerSerializer(customer)
             return Response(serializer.data)
         else:
-            serializer = CustomerSerializer(customer, data=request.data)
+            serializer = CustomerSerializer(customer,data=request.data, partial=request.method == 'PATCH')
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data)
