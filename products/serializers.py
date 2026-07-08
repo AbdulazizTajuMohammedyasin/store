@@ -46,6 +46,7 @@ class CartItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = CartItem
         fields = ['id','product','quantity','total_price']
+        
     def get_total_price(self, cart_item):
         return cart_item.product.price * cart_item.quantity
     
@@ -53,6 +54,7 @@ class CartSerializer(serializers.ModelSerializer):
     id = serializers.UUIDField(read_only=True)
     cartitem_set = CartItemSerializer(many=True, read_only=True)
     total_price = serializers.SerializerMethodField()
+    
     class Meta:
         model = Cart
         fields = ['id','cartitem_set','total_price']
@@ -61,12 +63,49 @@ class CartSerializer(serializers.ModelSerializer):
             item.product.price * item.quantity
             for item in cart.cartitem_set.all()
         )
+        
+    def validate(self, attrs):
+        customer = Customer.objects.get(user_id=self.context['user_id'])
+        
+        
+        if self.context["request"].method == "POST" and Cart.objects.filter(
+            customer=customer
+        ).exists():
+            raise serializers.ValidationError({
+            "detail": "You already have a Cart."
+            })
+
+        return attrs
+            
+    
+    def save(self, **kwargs):
+        user_id = self.context['user_id']
+        customer = Customer.objects.get(user_id=user_id)
+        
+        cart = Cart.objects.create(customer=customer, **self.validated_data)
+        self.instance = cart 
+        return self.instance 
     
 class AddCartItemSerializer(serializers.ModelSerializer):
     product_id = serializers.IntegerField()
     class Meta:
         model = CartItem
         fields = ['id','product_id','quantity']
+        
+    def validate(self, attrs):
+        customer = Customer.objects.get(
+            user_id=self.context['user_id']
+        )
+
+        if not Cart.objects.filter(
+            id=self.context['cart_id'],
+            customer=customer
+        ).exists():
+            raise serializers.ValidationError({
+                 "detail":"You do not own this cart."
+            })
+
+        return attrs
 
     def validate_product_id(self, value):
         if not Product.objects.filter(pk=value).exists():
@@ -194,7 +233,9 @@ class OrderCreateSerializer(serializers.Serializer):
     cart_id = serializers.UUIDField()
     
     def validate_cart_id(self, cart_id):
-        if not Cart.objects.filter(pk=cart_id).exists():
+        customer = Customer.objects.get(user_id=self.context['user_id'])
+        
+        if not Cart.objects.filter(pk=cart_id, customer=customer).exists():
             raise serializers.ValidationError("Cart does not exist.")
 
         if not CartItem.objects.filter(cart_id=cart_id).exists():

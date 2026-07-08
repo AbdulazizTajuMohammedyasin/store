@@ -68,10 +68,21 @@ class CollectionViewSet(ModelViewSet):
 class CartViewSet(ListModelMixin, RetrieveModelMixin, CreateModelMixin, DestroyModelMixin,GenericViewSet):
     queryset = Cart.objects.prefetch_related('cartitem_set__product')
     serializer_class = CartSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        return Cart.objects.prefetch_related('cartitem_set__product').filter(customer__user=self.request.user)
+    
+    def get_serializer_context(self):
+        return {
+            'user_id':self.request.user.id,
+            'request':self.request
+        }
 
 class CartItemViewSet(ModelViewSet):
     
     http_method_names = ['get', 'post', 'patch', 'delete']
+    permission_classes= [IsAuthenticated]
     
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -82,10 +93,13 @@ class CartItemViewSet(ModelViewSet):
             return UpdateCartItemSerializer
     
     def get_serializer_context(self):
-        return {'cart_id':self.kwargs['cart_pk']}
+        return {
+                'cart_id':self.kwargs['cart_pk'],
+                'user_id': self.request.user.id
+                }
         
     def get_queryset(self):
-        return CartItem.objects.filter(cart_id=self.kwargs['cart_pk']).select_related('product')
+        return CartItem.objects.filter(cart_id=self.kwargs['cart_pk'], cart__customer__user=self.request.user).select_related('product')
 
 class CustomerViewSet(ModelViewSet):
     
