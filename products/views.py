@@ -65,7 +65,7 @@ class CollectionViewSet(ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
         )
 
-class CartViewSet(ListModelMixin, RetrieveModelMixin, CreateModelMixin, DestroyModelMixin,GenericViewSet):
+class CartViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet):
     queryset = Cart.objects.prefetch_related('cartitem_set__product')
     serializer_class = CartSerializer
     permission_classes = [IsAuthenticated]
@@ -73,11 +73,6 @@ class CartViewSet(ListModelMixin, RetrieveModelMixin, CreateModelMixin, DestroyM
     def get_queryset(self):
         return Cart.objects.prefetch_related('cartitem_set__product').filter(customer__user=self.request.user)
     
-    def get_serializer_context(self):
-        return {
-            'user_id':self.request.user.id,
-            'request':self.request
-        }
 
 class CartItemViewSet(ModelViewSet):
     

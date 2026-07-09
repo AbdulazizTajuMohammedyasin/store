@@ -64,27 +64,7 @@ class CartSerializer(serializers.ModelSerializer):
             for item in cart.cartitem_set.all()
         )
         
-    def validate(self, attrs):
-        customer = Customer.objects.get(user_id=self.context['user_id'])
-        
-        
-        if self.context["request"].method == "POST" and Cart.objects.filter(
-            customer=customer
-        ).exists():
-            raise serializers.ValidationError({
-            "detail": "You already have a Cart."
-            })
-
-        return attrs
-            
     
-    def save(self, **kwargs):
-        user_id = self.context['user_id']
-        customer = Customer.objects.get(user_id=user_id)
-        
-        cart = Cart.objects.create(customer=customer, **self.validated_data)
-        self.instance = cart 
-        return self.instance 
     
 class AddCartItemSerializer(serializers.ModelSerializer):
     product_id = serializers.IntegerField()
@@ -275,7 +255,7 @@ class OrderCreateSerializer(serializers.Serializer):
             ]
             
             OrderItem.objects.bulk_create(order_items)
-            Cart.objects.filter(pk=cart_id).delete()
+            CartItem.objects.filter(cart_id=cart_id).delete()
             
             return order 
        
