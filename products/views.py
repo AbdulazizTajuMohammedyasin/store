@@ -80,21 +80,21 @@ class CartItemViewSet(ModelViewSet):
     permission_classes= [IsAuthenticated]
     
     def get_serializer_class(self):
-        if self.request.method == 'POST':
+        if self.action == 'create':
             return AddCartItemSerializer
-        elif self.request.method == 'GET':
+
+        if self.action in ['list', 'retrieve']:
             return CartItemSerializer
-        else :
-            return UpdateCartItemSerializer
+
+        return UpdateCartItemSerializer
     
     def get_serializer_context(self):
         return {
-                'cart_id':self.kwargs['cart_pk'],
                 'user_id': self.request.user.id
                 }
         
     def get_queryset(self):
-        return CartItem.objects.filter(cart_id=self.kwargs['cart_pk'], cart__customer__user=self.request.user).select_related('product')
+        return CartItem.objects.filter(cart__customer__user=self.request.user).select_related('product')
 
 class CustomerViewSet(ModelViewSet):
     
