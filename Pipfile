@@ -14,6 +14,7 @@ djangorestframework-simplejwt = "*"
 pillow = "*"
 
 [dev-packages]
+faker = "*"
 
 [requires]
 python_version = "3.13"
