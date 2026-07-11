@@ -47,7 +47,7 @@ INSTALLED_APPS = [
     'django_filters',
     'products',
     'tags',
-    
+    'recommendations'
 ]
 
 MIDDLEWARE = [
