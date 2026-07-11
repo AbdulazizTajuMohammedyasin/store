@@ -12,6 +12,8 @@ drf-nested-routers = "*"
 djoser = "*"
 djangorestframework-simplejwt = "*"
 pillow = "*"
+pandas = "*"
+scikit-learn = "*"
 
 [dev-packages]
 faker = "*"
