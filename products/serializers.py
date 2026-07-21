@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Product, Collection, Cart, CartItem, Customer, Order, OrderItem, ProductImage, Review
+from .models import Product, Collection, Cart, CartItem, Customer, Order, OrderItem, ProductImage, Review, Address
 from django.db import transaction
 
 class ProductImageSerializer(serializers.ModelSerializer):
@@ -294,3 +294,8 @@ class ReviewSerializer(serializers.ModelSerializer):
             customer=customer,
             **validated_data
         )
+
+class AddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Address
+        fields = ['id', 'street', 'city']

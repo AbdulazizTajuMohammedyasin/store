@@ -5,12 +5,13 @@ from rest_framework.viewsets import ModelViewSet, GenericViewSet
 from rest_framework.mixins import DestroyModelMixin, CreateModelMixin, RetrieveModelMixin, ListModelMixin, UpdateModelMixin
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, IsAuthenticatedOrReadOnly
+from rest_framework.exceptions import ValidationError
 from .permissions import IsAdminOrReadOnly, IsReviewOwner
 from rest_framework import status
 from rest_framework.response import Response 
 from rest_framework.filters import SearchFilter, OrderingFilter
-from .serializers import ProductSerializer, ProductCreateSerializer, CollectionSerializer, CartSerializer, CartItemSerializer, AddCartItemSerializer, UpdateCartItemSerializer, CustomerSerializer, OrderSerializer, OrderCreateSerializer, OrderUpdateSerializer, ProductImageSerializer, ReviewSerializer, CustomerAdminSerializer
-from .models import Product, Collection, Cart, CartItem, Customer, Order, ProductImage, Review
+from .serializers import ProductSerializer, ProductCreateSerializer, CollectionSerializer, CartSerializer, CartItemSerializer, AddCartItemSerializer, UpdateCartItemSerializer, CustomerSerializer, OrderSerializer, OrderCreateSerializer, OrderUpdateSerializer, ProductImageSerializer, ReviewSerializer, CustomerAdminSerializer, AddressSerializer
+from .models import Product, Collection, Cart, CartItem, Customer, Order, ProductImage, Review, Address
 from .filters import ProductFilter
 
 
@@ -185,3 +186,23 @@ class ReviewViewSet(ModelViewSet):
             context["customer"] = self.request.user.customer
         return context
     
+class AddressViewSet(ModelViewSet):
+    serializer_class = AddressSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Address.objects.filter(
+            customer__user=self.request.user
+        )
+
+    def perform_create(self, serializer):
+        customer = Customer.objects.get(
+            user=self.request.user
+        )
+
+        if Address.objects.filter(customer=customer).exists():
+            raise ValidationError(
+                "Address already exists."
+            )
+
+        serializer.save(customer=customer)

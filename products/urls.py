@@ -1,5 +1,5 @@
 from rest_framework_nested import routers
-from .views import ProductViewSet,CollectionViewSet, CartViewSet, CartItemViewSet, CustomerViewSet, OrderViewSet, ProductImageViewSet, ReviewViewSet
+from .views import ProductViewSet,CollectionViewSet, CartViewSet, CartItemViewSet, CustomerViewSet, OrderViewSet, ProductImageViewSet, ReviewViewSet, AddressViewSet
 
 router = routers.DefaultRouter()
 router.register(r'products', ProductViewSet)
@@ -8,6 +8,7 @@ router.register(r'cart',CartViewSet)
 router.register(r'cart-items', CartItemViewSet, basename='cart-item')
 router.register(r'customers',CustomerViewSet)
 router.register(r'orders',OrderViewSet, basename='orders')
+router.register(r'addresses', AddressViewSet, basename='addresses')
 
 
 product_router = routers.NestedDefaultRouter(router, 'products', lookup='product')
