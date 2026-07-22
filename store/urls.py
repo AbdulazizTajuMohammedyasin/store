@@ -28,6 +28,7 @@ urlpatterns = [
     path('auth/', include('djoser.urls')),
     path('auth/', include('djoser.urls.jwt')),
     path('',include('recommendations.urls')),
+    path('', include('tags.urls')),
 ]
 
 if settings.DEBUG:
