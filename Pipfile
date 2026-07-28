@@ -17,6 +17,7 @@ scikit-learn = "*"
 django-celery-beat = "*"
 celery = "*"
 redis = "*"
+django-cors-headers = "*"
 
 [dev-packages]
 faker = "*"
