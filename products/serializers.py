@@ -28,9 +28,28 @@ class ProductCreateSerializer(serializers.ModelSerializer):
             'price',
             'collection'
         ]
-    
+        
+class FeaturedProductSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Product
+        fields = [
+            "title",
+            "image"
+        ]
+
+    def get_image(self, product):
+        image = product.productimage_set.first()
+
+        if image:
+            request = self.context.get("request")
+            return request.build_absolute_uri(image.image.url)
+
+        return None   
+
 class CollectionSerializer(serializers.ModelSerializer):
-    featured_product = serializers.StringRelatedField()
+    featured_product = FeaturedProductSerializer()
     class Meta:
         model = Collection
         fields = ['id','title','featured_product']
