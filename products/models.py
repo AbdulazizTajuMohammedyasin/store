@@ -38,6 +38,11 @@ class Customer(models.Model):
     birth_date = models.DateField(null=True, blank=True)
     membership = models.CharField(max_length=1, choices=CHOICE, default='B')
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    profile_image = models.ImageField(
+        upload_to="customers/",
+        null=True,
+        blank=True
+    )
 
     def __str__(self):
         return self.user.first_name

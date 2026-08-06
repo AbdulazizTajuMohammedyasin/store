@@ -128,48 +128,39 @@ class CustomerSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(source='user.first_name')
     last_name = serializers.CharField(source='user.last_name')
     email = serializers.EmailField(source='user.email')
-    
     membership = serializers.CharField(read_only=True)
-
+    profile_image = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = Customer
         fields = [
-            'id',
-            'first_name',
-            'last_name',
-            'email',
-            'phone',
-            'birth_date',
-            'membership'
+            'id', 'first_name', 'last_name', 'email',
+            'phone', 'birth_date', 'membership', 'profile_image',
         ]
-        
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        if instance.profile_image:
+            request = self.context.get('request')
+            rep['profile_image'] = (
+                request.build_absolute_uri(instance.profile_image.url)
+                if request else instance.profile_image.url
+            )
+        else:
+            rep['profile_image'] = None
+        return rep
+
     def update(self, instance, validated_data):
         user_data = validated_data.pop('user', {})
-
         user = instance.user
-        user.first_name = user_data.get(
-            'first_name',
-            user.first_name
-        )
-        user.last_name = user_data.get(
-            'last_name',
-            user.last_name
-        )
-        user.email = user_data.get(
-            'email',
-            user.email
-        )
+        user.first_name = user_data.get('first_name', user.first_name)
+        user.last_name = user_data.get('last_name', user.last_name)
+        user.email = user_data.get('email', user.email)
         user.save()
 
-        instance.phone = validated_data.get(
-            'phone',
-            instance.phone
-        )
-        instance.birth_date = validated_data.get(
-            'birth_date',
-            instance.birth_date
-        )
+        instance.phone = validated_data.get('phone', instance.phone)
+        instance.birth_date = validated_data.get('birth_date', instance.birth_date)
+        instance.profile_image = validated_data.get('profile_image', instance.profile_image)
         instance.save()
 
         return instance

@@ -112,10 +112,10 @@ class CustomerViewSet(ModelViewSet):
     def me(self, request):
         customer = Customer.objects.get(user_id= request.user.id)
         if request.method == 'GET':
-            serializer = CustomerSerializer(customer)
+            serializer = CustomerSerializer(customer, context={'request': request})
             return Response(serializer.data)
         else:
-            serializer = CustomerSerializer(customer,data=request.data, partial=request.method == 'PATCH')
+            serializer = CustomerSerializer(customer,data=request.data, partial=request.method == 'PATCH', context={'request': request})
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data)
