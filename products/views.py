@@ -13,11 +13,13 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from .serializers import ProductSerializer, ProductCreateSerializer, CollectionSerializer, CartSerializer, CartItemSerializer, AddCartItemSerializer, UpdateCartItemSerializer, CustomerSerializer, OrderSerializer, OrderCreateSerializer, OrderUpdateSerializer, ProductImageSerializer, ReviewSerializer, CustomerAdminSerializer, AddressSerializer
 from .models import Product, Collection, Cart, CartItem, Customer, Order, ProductImage, Review, Address
 from .filters import ProductFilter
+from .pagination import ProductPagination
 
 
 class ProductViewSet(ModelViewSet):
     queryset = Product.objects.prefetch_related('productimage_set').all()
     permission_classes = [IsAdminOrReadOnly]
+    pagination_class = ProductPagination
     filter_backends = [
         DjangoFilterBackend,
         SearchFilter,
