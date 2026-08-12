@@ -10,11 +10,10 @@ from .permissions import IsAdminOrReadOnly, IsReviewOwner
 from rest_framework import status
 from rest_framework.response import Response 
 from rest_framework.filters import SearchFilter, OrderingFilter
-from .serializers import ProductSerializer, ProductCreateSerializer, CollectionSerializer, CartSerializer, CartItemSerializer, AddCartItemSerializer, UpdateCartItemSerializer, CustomerSerializer, OrderSerializer, OrderCreateSerializer, OrderUpdateSerializer, ProductImageSerializer, ReviewSerializer, CustomerAdminSerializer, AddressSerializer
+from .serializers import ProductSerializer, ProductAdminSerializer, ProductCreateSerializer, CollectionSerializer, CartSerializer, CartItemSerializer, AddCartItemSerializer, UpdateCartItemSerializer, CustomerSerializer, OrderSerializer, OrderCreateSerializer, OrderUpdateSerializer, ProductImageSerializer, ReviewSerializer, CustomerAdminSerializer, AddressSerializer
 from .models import Product, Collection, Cart, CartItem, Customer, Order, ProductImage, Review, Address
 from .filters import ProductFilter
 from .pagination import ProductPagination
-
 
 class ProductViewSet(ModelViewSet):
     queryset = Product.objects.prefetch_related('productimage_set').all()
@@ -28,11 +27,12 @@ class ProductViewSet(ModelViewSet):
     filterset_class = ProductFilter
     search_fields = ['title', 'description']
     ordering_fields = ['last_update', 'title', 'price']
-    
+  
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
             return ProductCreateSerializer
-
+        if self.action == 'retrieve' and self.request.user.is_staff:
+            return ProductAdminSerializer
         return ProductSerializer
     
     def destroy(self, request, *args, **kwargs):

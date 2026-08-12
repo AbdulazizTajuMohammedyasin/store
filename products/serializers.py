@@ -16,6 +16,13 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ['id','title','description', 'price', 'collection','images'] 
+    
+class ProductAdminSerializer(serializers.ModelSerializer):
+    images = ProductImageSerializer(many=True, source='productimage_set', read_only=True)
+ 
+    class Meta:
+        model = Product
+        fields = ['id', 'title', 'description', 'price', 'inventory', 'collection', 'images']
 
 class ProductCreateSerializer(serializers.ModelSerializer):
     class Meta:
