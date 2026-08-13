@@ -10,10 +10,11 @@ from .permissions import IsAdminOrReadOnly, IsReviewOwner
 from rest_framework import status
 from rest_framework.response import Response 
 from rest_framework.filters import SearchFilter, OrderingFilter
-from .serializers import ProductSerializer, ProductAdminSerializer, ProductCreateSerializer, CollectionSerializer, CartSerializer, CartItemSerializer, AddCartItemSerializer, UpdateCartItemSerializer, CustomerSerializer, OrderSerializer, OrderCreateSerializer, OrderUpdateSerializer, ProductImageSerializer, ReviewSerializer, CustomerAdminSerializer, AddressSerializer
+from .serializers import ProductSerializer, ProductAdminSerializer, ProductCreateSerializer, CollectionSerializer, CollectionAdminSerializer, CartSerializer, CartItemSerializer, AddCartItemSerializer, UpdateCartItemSerializer, CustomerSerializer, OrderSerializer, OrderCreateSerializer, OrderUpdateSerializer, ProductImageSerializer, ReviewSerializer, CustomerAdminSerializer, AddressSerializer
 from .models import Product, Collection, Cart, CartItem, Customer, Order, ProductImage, Review, Address
 from .filters import ProductFilter
 from .pagination import ProductPagination
+from django.db.models import Count
 
 class ProductViewSet(ModelViewSet):
     queryset = Product.objects.prefetch_related('productimage_set').all()
@@ -66,6 +67,39 @@ class CollectionViewSet(ModelViewSet):
                     "error": "This collection has products inside it."
                 },
                 status=status.HTTP_400_BAD_REQUEST
+        )
+            
+class AdminCollectionViewSet(ModelViewSet):
+    queryset = Collection.objects.annotate(
+        products_count=Count("product")
+    )
+
+    serializer_class = CollectionAdminSerializer
+
+    permission_classes = [IsAdminUser]
+
+    filter_backends = [
+        SearchFilter,
+        OrderingFilter,
+    ]
+
+    search_fields = ["title"]
+
+    ordering_fields = [
+        "title",
+        "products_count",
+    ]
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            return super().destroy(request, *args, **kwargs)
+
+        except ProtectedError:
+            return Response(
+                {
+                    "error": "This collection has products inside it."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
         )
 
 class CartViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet):

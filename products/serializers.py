@@ -60,6 +60,24 @@ class CollectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Collection
         fields = ['id','title','featured_product']
+        
+class CollectionAdminSerializer(serializers.ModelSerializer):
+    products_count = serializers.IntegerField(read_only=True)
+
+    featured_product_details = FeaturedProductSerializer(
+        source="featured_product",
+        read_only=True
+    )
+
+    class Meta:
+        model = Collection
+        fields = [
+            "id",
+            "title",
+            "featured_product",
+            "featured_product_details",
+            "products_count",
+        ]        
     
 class ProductSerializer1(serializers.ModelSerializer):
     class Meta:
