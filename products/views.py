@@ -162,6 +162,17 @@ class OrderViewSet(ModelViewSet):
     
     http_method_names = ['get','post', 'head', 'options', 'patch', 'delete']
     
+    search_fields = [
+        "customer__user__username",
+        "customer__user__email",
+        "customer__user__first_name",
+        "customer__user__last_name",
+    ]
+    ordering_fields = [
+        "placed_at",
+        "payment_status",
+    ]
+    
     def get_permissions(self):
         if self.request.method in ['PATCH', 'DELETE']:
             return [IsAdminUser()] 
