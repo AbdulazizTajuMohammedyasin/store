@@ -1,4 +1,5 @@
 from djoser.serializers import UserCreatePasswordRetypeSerializer as Base
+from djoser.serializers import UserSerializer as BaseUserSerializer
 from rest_framework import serializers
 
 class UserCreateSerializer(Base):
@@ -17,3 +18,7 @@ class UserCreateSerializer(Base):
             )
 
         return value
+
+class UserSerializer(BaseUserSerializer):
+    class Meta(BaseUserSerializer.Meta):
+        fields = BaseUserSerializer.Meta.fields + ('is_staff',)

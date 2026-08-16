@@ -170,6 +170,8 @@ DJOSER = {
     
     'SERIALIZERS':{
          'user_create_password_retype': 'users.serializers.UserCreateSerializer',
+         'current_user': 'users.serializers.UserSerializer',
+         'user': 'users.serializers.UserSerializer',
     }
 }
 
