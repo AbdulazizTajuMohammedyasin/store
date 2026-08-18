@@ -18,6 +18,7 @@ django-celery-beat = "*"
 celery = "*"
 redis = "*"
 django-cors-headers = "*"
+google-genai = "*"
 
 [dev-packages]
 faker = "*"

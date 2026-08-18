@@ -183,3 +183,13 @@ CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
 ]
+
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+REVIEW_SUMMARY_CACHE_TTL = int(os.getenv('REVIEW_SUMMARY_CACHE_TTL', 3600))
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0'),
+    }
+}
