@@ -1,19 +1,22 @@
 from django.shortcuts import render
 from django.db.models import ProtectedError
+from django.conf import settings
+from django.core.cache import cache
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.viewsets import ModelViewSet, GenericViewSet
+from rest_framework.viewsets import ModelViewSet, GenericViewSet, ViewSet
 from rest_framework.mixins import DestroyModelMixin, CreateModelMixin, RetrieveModelMixin, ListModelMixin, UpdateModelMixin
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated, IsAdminUser, IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, IsAuthenticatedOrReadOnly, AllowAny
 from rest_framework.exceptions import ValidationError
 from .permissions import IsAdminOrReadOnly, IsReviewOwner
 from rest_framework import status
 from rest_framework.response import Response 
 from rest_framework.filters import SearchFilter, OrderingFilter
-from .serializers import ProductSerializer, ProductAdminSerializer, ProductCreateSerializer, CollectionSerializer, CollectionAdminSerializer, CartSerializer, CartItemSerializer, AddCartItemSerializer, UpdateCartItemSerializer, CustomerSerializer, OrderSerializer, OrderCreateSerializer, OrderUpdateSerializer, ProductImageSerializer, ReviewSerializer, CustomerAdminSerializer, AddressSerializer
+from .serializers import ProductSerializer, ProductAdminSerializer, ProductCreateSerializer, CollectionSerializer, CollectionAdminSerializer, CartSerializer, CartItemSerializer, AddCartItemSerializer, UpdateCartItemSerializer, CustomerSerializer, OrderSerializer, OrderCreateSerializer, OrderUpdateSerializer, ProductImageSerializer, ReviewSerializer, CustomerAdminSerializer, AddressSerializer, ReviewSummarySerializer
 from .models import Product, Collection, Cart, CartItem, Customer, Order, ProductImage, Review, Address
 from .filters import ProductFilter
 from .pagination import ProductPagination
+from .services import GeminiClient, GeminiServiceError, ReviewPromptBuilder
 from django.db.models import Count
 
 class ProductViewSet(ModelViewSet):
@@ -254,3 +257,39 @@ class AddressViewSet(ModelViewSet):
             )
 
         serializer.save(customer=customer)
+        
+class ReviewSummaryViewSet(ViewSet):
+    permission_classes = [AllowAny]
+    def list(self, request, product_pk=None):
+        if not Product.objects.filter(pk=product_pk).exists():
+            return Response(
+                {"error": "Product not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        cache_key = f"review_summary_{product_pk}"
+        cached = cache.get(cache_key)
+        if cached:
+            return Response(cached)
+
+        reviews = Review.objects.filter(product_id=product_pk)
+        if not reviews.exists():
+            return Response(
+                {"error": "This product has no reviews to summarize."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        prompt = ReviewPromptBuilder.build(reviews)
+
+        try:
+            summary_text = GeminiClient().summarize(prompt)
+        except GeminiServiceError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+        serializer = ReviewSummarySerializer(data={"summary": summary_text})
+        serializer.is_valid(raise_exception=True)
+
+        cache.set(cache_key, serializer.data, timeout=settings.REVIEW_SUMMARY_CACHE_TTL)
+        return Response(serializer.data)

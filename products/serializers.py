@@ -334,3 +334,6 @@ class AddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = Address
         fields = ['id', 'street', 'city']
+        
+class ReviewSummarySerializer(serializers.Serializer):
+    summary = serializers.CharField()
