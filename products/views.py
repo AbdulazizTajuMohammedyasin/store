@@ -237,6 +237,21 @@ class ReviewViewSet(ModelViewSet):
             context["customer"] = self.request.user.customer
         return context
     
+    def _invalidate_summary_cache(self):
+        cache.delete(f"review_summary_{self.kwargs['product_pk']}")
+
+    def perform_create(self, serializer):
+        super().perform_create(serializer)
+        self._invalidate_summary_cache()
+
+    def perform_update(self, serializer):
+        super().perform_update(serializer)
+        self._invalidate_summary_cache()
+
+    def perform_destroy(self, instance):
+        super().perform_destroy(instance)
+        self._invalidate_summary_cache()
+    
 class AddressViewSet(ModelViewSet):
     serializer_class = AddressSerializer
     permission_classes = [IsAuthenticated]
