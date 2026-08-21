@@ -260,19 +260,31 @@ class AddressViewSet(ModelViewSet):
         
 class ReviewSummaryViewSet(ViewSet):
     permission_classes = [AllowAny]
+    MAX_REVIEWS_FOR_SUMMARY = 200
+
     def list(self, request, product_pk=None):
+        if not str(product_pk).isdigit():
+            return Response(
+                {"error": "Invalid product id."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         if not Product.objects.filter(pk=product_pk).exists():
             return Response(
                 {"error": "Product not found."},
                 status=status.HTTP_404_NOT_FOUND
             )
+
         cache_key = f"review_summary_{product_pk}"
         cached = cache.get(cache_key)
         if cached:
             return Response(cached)
 
-        reviews = Review.objects.filter(product_id=product_pk)
-        if not reviews.exists():
+        reviews = list(
+            Review.objects.filter(product_id=product_pk)
+            .order_by("-created_at")[: self.MAX_REVIEWS_FOR_SUMMARY]
+        )
+        if not reviews:
             return Response(
                 {"error": "This product has no reviews to summarize."},
                 status=status.HTTP_400_BAD_REQUEST
@@ -289,7 +301,11 @@ class ReviewSummaryViewSet(ViewSet):
             )
 
         serializer = ReviewSummarySerializer(data={"summary": summary_text})
-        serializer.is_valid(raise_exception=True)
+        if not serializer.is_valid():
+            return Response(
+                {"error": "Failed to generate a valid summary."},
+                status=status.HTTP_502_BAD_GATEWAY
+            )
 
         cache.set(cache_key, serializer.data, timeout=settings.REVIEW_SUMMARY_CACHE_TTL)
         return Response(serializer.data)
