@@ -29,6 +29,7 @@ urlpatterns = [
     path('auth/', include('djoser.urls.jwt')),
     path('',include('recommendations.urls')),
     path('', include('tags.urls')),
+    path("chat/", include("chatbot.urls")),
 ]
 
 if settings.DEBUG:
