@@ -12,12 +12,13 @@ class GeminiClient:
         self._client = genai.Client(api_key=settings.GEMINI_API_KEY)
         self._model = "gemini-3.5-flash-lite"
 
-    def summarize(self, prompt: str) -> str:
+    def _generate(self, prompt: str) -> str:
         try:
             response = self._client.models.generate_content(
                 model=self._model,
                 contents=prompt,
             )
+
             text = response.text.strip()
 
             if not text:
@@ -31,3 +32,9 @@ class GeminiClient:
             raise GeminiServiceError(
                 f"Gemini API call failed: {e}"
             )
+
+    def summarize(self, prompt: str) -> str:
+        return self._generate(prompt)
+
+    def generate(self, prompt: str) -> str:
+        return self._generate(prompt)
