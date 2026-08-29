@@ -19,6 +19,7 @@ celery = "*"
 redis = "*"
 django-cors-headers = "*"
 google-genai = "*"
+langchain-google-genai = "*"
 
 [dev-packages]
 faker = "*"
