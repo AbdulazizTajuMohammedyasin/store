@@ -21,6 +21,7 @@ django-cors-headers = "*"
 google-genai = "*"
 langchain-google-genai = "*"
 langchain = "*"
+python-dotenv = "*"
 
 [dev-packages]
 faker = "*"
