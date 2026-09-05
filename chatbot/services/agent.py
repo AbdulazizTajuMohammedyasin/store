@@ -14,8 +14,8 @@ class ChatAgent:
         self.llm_with_tools = self.llm.bind_tools(self.TOOLS)
         self.tools_by_name = {tool.name: tool for tool in self.TOOLS}
 
-    def invoke(self, message: str):
-        messages = [HumanMessage(content=message)]
+    def invoke(self, message: str, history: list | None = None):
+        messages = list(history or []) + [HumanMessage(content=message)]
 
         for _ in range(self.MAX_TOOL_ITERATIONS):
             response = self.llm_with_tools.invoke(messages)
