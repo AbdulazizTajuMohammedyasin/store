@@ -22,7 +22,7 @@ class ChatAgent:
             messages.append(response)
 
             if not response.tool_calls:
-                return response.content
+                return self._extract_text(response.content)
 
             for tool_call in response.tool_calls:
                 tool = self.tools_by_name.get(tool_call["name"])
@@ -43,3 +43,29 @@ class ChatAgent:
             "I couldn't complete that request right now. "
             "Please try rephrasing."
         )
+
+    @staticmethod
+    def _extract_text(content) -> str:
+        """
+        Normalize a LangChain message's `.content` into a plain string.
+
+        Newer langchain-google-genai versions return `.content` as a list
+        of content blocks (e.g. `{"type": "text", "text": "...", "extras": {...}}`)
+        instead of a plain string, so this keeps the string contract
+        expected by the rest of the app (persisted messages, API response).
+        """
+        if isinstance(content, str):
+            return content
+
+        if isinstance(content, list):
+            parts = []
+
+            for block in content:
+                if isinstance(block, str):
+                    parts.append(block)
+                elif isinstance(block, dict) and block.get("type") == "text":
+                    parts.append(block.get("text", ""))
+
+            return "".join(parts)
+
+        return str(content)
