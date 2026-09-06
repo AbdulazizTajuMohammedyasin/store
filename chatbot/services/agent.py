@@ -2,13 +2,14 @@ from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 
 from .llm import get_llm
 from .prompt import SYSTEM_PROMPT
-from .tools.product_tool import product_search
+from .tools.product_tool import product_details, product_search
+from .tools.reviews import product_reviews
 
 
 class ChatAgent:
     MAX_TOOL_ITERATIONS = 5
 
-    TOOLS = [product_search]
+    TOOLS = [product_search, product_details, product_reviews]
 
     def __init__(self):
         self.llm = get_llm()
