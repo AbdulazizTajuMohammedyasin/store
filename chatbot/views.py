@@ -38,7 +38,7 @@ class ChatView(APIView):
             content=text,
         )
 
-        reply = ChatAgent().invoke(text, history=history)
+        reply = ChatAgent(customer).invoke(text, history=history)
 
         Message.objects.create(
             conversation=conversation,

@@ -1,20 +1,43 @@
+from langchain.tools import tool
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 
 from .llm import get_llm
 from .prompt import SYSTEM_PROMPT
 from .tools.product_tool import product_details, product_search
+from .tools.recommendations import get_recommended_products_for_customer, similar_products
 from .tools.reviews import product_reviews
 
 
 class ChatAgent:
     MAX_TOOL_ITERATIONS = 5
 
-    TOOLS = [product_search, product_details, product_reviews]
-
-    def __init__(self):
+    def __init__(self, customer):
+        self.customer = customer
         self.llm = get_llm()
-        self.llm_with_tools = self.llm.bind_tools(self.TOOLS)
-        self.tools_by_name = {tool.name: tool for tool in self.TOOLS}
+
+        self.tools = [
+            product_search,
+            product_details,
+            product_reviews,
+            similar_products,
+            self._recommended_products_tool(),
+        ]
+
+        self.llm_with_tools = self.llm.bind_tools(self.tools)
+        self.tools_by_name = {t.name: t for t in self.tools}
+
+    def _recommended_products_tool(self):
+        customer_id = self.customer.id
+
+        @tool
+        def recommended_products():
+            """
+            Get personalized product recommendations for the current
+            customer, based on their past orders.
+            """
+            return get_recommended_products_for_customer(customer_id)
+
+        return recommended_products
 
     def invoke(self, message: str, history: list | None = None):
         messages = (
