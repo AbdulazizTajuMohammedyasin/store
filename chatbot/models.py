@@ -48,6 +48,7 @@ class KnowledgeArticle(models.Model):
     title = models.CharField(max_length=255)
     category = models.CharField(max_length=20, choices=Category.choices)
     content = models.TextField()
+    embedding = models.JSONField(null=True, blank=True, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

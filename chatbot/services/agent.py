@@ -3,6 +3,7 @@ from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 
 from .llm import get_llm
 from .prompt import SYSTEM_PROMPT
+from .tools.knowledge import knowledge_base_search
 from .tools.product_tool import product_details, product_search
 from .tools.recommendations import get_recommended_products_for_customer, similar_products
 from .tools.reviews import product_reviews
@@ -20,6 +21,7 @@ class ChatAgent:
             product_details,
             product_reviews,
             similar_products,
+            knowledge_base_search,
             self._recommended_products_tool(),
         ]
 
