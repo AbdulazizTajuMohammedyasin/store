@@ -1,6 +1,7 @@
-from langchain_core.messages import HumanMessage, ToolMessage
+from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 
 from .llm import get_llm
+from .prompt import SYSTEM_PROMPT
 from .tools.product_tool import product_search
 
 
@@ -15,7 +16,11 @@ class ChatAgent:
         self.tools_by_name = {tool.name: tool for tool in self.TOOLS}
 
     def invoke(self, message: str, history: list | None = None):
-        messages = list(history or []) + [HumanMessage(content=message)]
+        messages = (
+            [SystemMessage(content=SYSTEM_PROMPT)]
+            + list(history or [])
+            + [HumanMessage(content=message)]
+        )
 
         for _ in range(self.MAX_TOOL_ITERATIONS):
             response = self.llm_with_tools.invoke(messages)
