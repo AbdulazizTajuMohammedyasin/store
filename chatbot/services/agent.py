@@ -4,6 +4,7 @@ from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from .llm import get_llm
 from .prompt import SYSTEM_PROMPT
 from .tools import cart as cart_tools
+from .tools import orders as order_tools
 from .tools.knowledge import knowledge_base_search
 from .tools.product_tool import product_details, product_search
 from .tools.recommendations import get_recommended_products_for_customer, similar_products
@@ -25,6 +26,7 @@ class ChatAgent:
             knowledge_base_search,
             self._recommended_products_tool(),
             *self._cart_tools(),
+            *self._order_tools(),
         ]
 
         self.llm_with_tools = self.llm.bind_tools(self.tools)
@@ -80,6 +82,27 @@ class ChatAgent:
             return cart_tools.remove_item_from_cart(customer, product_id)
 
         return [view_cart, add_to_cart, update_cart_item, remove_from_cart]
+
+    def _order_tools(self):
+        customer = self.customer
+
+        @tool
+        def list_my_orders():
+            """
+            List the current customer's past orders (id, date placed,
+            and payment status).
+            """
+            return order_tools.list_orders_for_customer(customer)
+
+        @tool
+        def get_order_details(order_id: int):
+            """
+            Get the items, quantities, and prices for one of the
+            current customer's own orders by id.
+            """
+            return order_tools.get_order_details_for_customer(customer, order_id)
+
+        return [list_my_orders, get_order_details]
 
     def invoke(self, message: str, history: list | None = None):
         messages = (
