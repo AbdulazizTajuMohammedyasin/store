@@ -3,6 +3,7 @@ from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 
 from .llm import get_llm
 from .prompt import SYSTEM_PROMPT
+from .tools import cart as cart_tools
 from .tools.knowledge import knowledge_base_search
 from .tools.product_tool import product_details, product_search
 from .tools.recommendations import get_recommended_products_for_customer, similar_products
@@ -23,6 +24,7 @@ class ChatAgent:
             similar_products,
             knowledge_base_search,
             self._recommended_products_tool(),
+            *self._cart_tools(),
         ]
 
         self.llm_with_tools = self.llm.bind_tools(self.tools)
@@ -40,6 +42,44 @@ class ChatAgent:
             return get_recommended_products_for_customer(customer_id)
 
         return recommended_products
+
+    def _cart_tools(self):
+        customer = self.customer
+
+        @tool
+        def view_cart():
+            """
+            View the current customer's cart: items, quantities, and
+            total price.
+            """
+            return cart_tools.get_cart_contents(customer)
+
+        @tool
+        def add_to_cart(product_id: int, quantity: int = 1):
+            """
+            Add a product to the current customer's cart, or increase
+            its quantity if it's already in the cart.
+            """
+            return cart_tools.add_item_to_cart(customer, product_id, quantity)
+
+        @tool
+        def update_cart_item(product_id: int, quantity: int):
+            """
+            Set the quantity of a product already in the current
+            customer's cart.
+            """
+            return cart_tools.update_cart_item_quantity(
+                customer, product_id, quantity
+            )
+
+        @tool
+        def remove_from_cart(product_id: int):
+            """
+            Remove a product from the current customer's cart.
+            """
+            return cart_tools.remove_item_from_cart(customer, product_id)
+
+        return [view_cart, add_to_cart, update_cart_item, remove_from_cart]
 
     def invoke(self, message: str, history: list | None = None):
         messages = (
