@@ -105,11 +105,7 @@ class ChatAgent:
         return [list_my_orders, get_order_details]
 
     def invoke(self, message: str, history: list | None = None):
-        messages = (
-            [SystemMessage(content=SYSTEM_PROMPT)]
-            + list(history or [])
-            + [HumanMessage(content=message)]
-        )
+        messages = self._build_messages(message, history)
 
         for _ in range(self.MAX_TOOL_ITERATIONS):
             response = self.llm_with_tools.invoke(messages)
@@ -118,21 +114,64 @@ class ChatAgent:
             if not response.tool_calls:
                 return self._extract_text(response.content)
 
-            for tool_call in response.tool_calls:
-                tool = self.tools_by_name.get(tool_call["name"])
+            self._run_tool_calls(response.tool_calls, messages)
 
-                if tool is None:
-                    result = f"Unknown tool: {tool_call['name']}"
-                else:
-                    result = tool.invoke(tool_call["args"])
+        return self._exhausted_message()
 
-                messages.append(
-                    ToolMessage(
-                        content=str(result),
-                        tool_call_id=tool_call["id"],
-                    )
+    def invoke_stream(self, message: str, history: list | None = None):
+        """
+        Same tool-calling loop as invoke(), but yields the final text
+        answer as it streams in, chunk by chunk. Tool-calling turns
+        never yield anything visible, since a turn's `.content` is
+        empty whenever the model responds with tool_calls instead of
+        text (confirmed against the real API).
+        """
+        messages = self._build_messages(message, history)
+
+        for _ in range(self.MAX_TOOL_ITERATIONS):
+            accumulated = None
+
+            for chunk in self.llm_with_tools.stream(messages):
+                accumulated = chunk if accumulated is None else accumulated + chunk
+
+                text = self._extract_text(chunk.content)
+                if text:
+                    yield text
+
+            messages.append(accumulated)
+
+            if not accumulated.tool_calls:
+                return
+
+            self._run_tool_calls(accumulated.tool_calls, messages)
+
+        yield self._exhausted_message()
+
+    def _build_messages(self, message: str, history: list | None):
+        return (
+            [SystemMessage(content=SYSTEM_PROMPT)]
+            + list(history or [])
+            + [HumanMessage(content=message)]
+        )
+
+    def _run_tool_calls(self, tool_calls, messages):
+        for tool_call in tool_calls:
+            tool = self.tools_by_name.get(tool_call["name"])
+
+            if tool is None:
+                result = f"Unknown tool: {tool_call['name']}"
+            else:
+                result = tool.invoke(tool_call["args"])
+
+            messages.append(
+                ToolMessage(
+                    content=str(result),
+                    tool_call_id=tool_call["id"],
                 )
+            )
 
+    @staticmethod
+    def _exhausted_message() -> str:
         return (
             "I couldn't complete that request right now. "
             "Please try rephrasing."
