@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
 from rest_framework import status
@@ -103,6 +103,34 @@ class ChatViewConversationTests(APITestCase):
         response = self.client.get("/chat/")
         self.assertEqual(response.data, [])
 
+    @patch("chatbot.services.agent.get_llm")
+    def test_post_still_persists_a_reply_when_the_llm_fails(self, mock_get_llm):
+        """
+        End-to-end regression test for a real bug found in review: a
+        failure talking to the model must not leave the user's message
+        with no reply, or surface as a raw 500. Only get_llm is mocked
+        here (not ChatAgent itself), so this exercises the agent's real
+        exception handling through the actual view.
+        """
+        mock_llm = MagicMock()
+        mock_get_llm.return_value = mock_llm
+        mock_llm.bind_tools.return_value = mock_llm
+        mock_llm.invoke.side_effect = RuntimeError("simulated API failure")
+
+        response = self.client.post(
+            "/chat/", {"message": "hi there"}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        conversation = Conversation.objects.get(customer=self.customer)
+        messages = list(conversation.messages.all())
+
+        self.assertEqual(len(messages), 2)
+        self.assertEqual(messages[0].role, Message.Role.USER)
+        self.assertEqual(messages[1].role, Message.Role.ASSISTANT)
+        self.assertTrue(messages[1].content)
+
 
 class ChatStreamViewTests(APITestCase):
     def setUp(self):
@@ -134,3 +162,33 @@ class ChatStreamViewTests(APITestCase):
         self.assertEqual(messages[0].content, "hi")
         self.assertEqual(messages[1].role, Message.Role.ASSISTANT)
         self.assertEqual(messages[1].content, "Hello!")
+
+    @patch("chatbot.services.agent.get_llm")
+    def test_stream_still_persists_a_reply_when_the_llm_fails(
+        self, mock_get_llm
+    ):
+        """
+        Streaming counterpart of the same regression test: only get_llm
+        is mocked (not ChatAgent), exercising the real agent's exception
+        handling through the actual streaming view.
+        """
+        mock_llm = MagicMock()
+        mock_get_llm.return_value = mock_llm
+        mock_llm.bind_tools.return_value = mock_llm
+        mock_llm.stream.side_effect = RuntimeError("simulated API failure")
+
+        response = self.client.post(
+            "/chat/stream/", {"message": "hi"}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        body = b"".join(response.streaming_content).decode()
+        self.assertTrue(body)
+
+        conversation = Conversation.objects.get(customer=self.customer)
+        messages = list(conversation.messages.all())
+
+        self.assertEqual(len(messages), 2)
+        self.assertEqual(messages[0].role, Message.Role.USER)
+        self.assertEqual(messages[1].role, Message.Role.ASSISTANT)
+        self.assertEqual(messages[1].content, body)

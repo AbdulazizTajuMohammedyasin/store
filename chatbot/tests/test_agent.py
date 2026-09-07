@@ -85,6 +85,24 @@ class ChatAgentInvokeTests(TestCase):
         self.assertIn("couldn't complete", result)
 
     @patch("chatbot.services.agent.get_llm")
+    def test_invoke_falls_back_gracefully_when_llm_raises(self, mock_get_llm):
+        """
+        A failure talking to the model (e.g. a rate limit error) must
+        never propagate as an exception -- the caller always gets a
+        string back, so the already-persisted user message never ends
+        up with no reply.
+        """
+        mock_llm = MagicMock()
+        mock_get_llm.return_value = mock_llm
+        mock_llm.bind_tools.return_value = mock_llm
+        mock_llm.invoke.side_effect = RuntimeError("simulated API failure")
+
+        result = ChatAgent(self.customer).invoke("hello")
+
+        self.assertIsInstance(result, str)
+        self.assertIn("couldn't complete", result)
+
+    @patch("chatbot.services.agent.get_llm")
     def test_recommended_products_tool_has_no_customer_argument(
         self, mock_get_llm
     ):
@@ -137,6 +155,26 @@ class ChatAgentInvokeStreamTests(TestCase):
         result = list(ChatAgent(self.customer).invoke_stream("hi"))
 
         self.assertEqual("".join(result), "Hello!")
+
+    @patch("chatbot.services.agent.get_llm")
+    def test_invoke_stream_falls_back_gracefully_when_llm_raises(
+        self, mock_get_llm
+    ):
+        """
+        Streaming counterpart of the invoke() failure test: a failure
+        mid-stream must still end the generator normally (yielding a
+        fallback message) rather than raising out of it, so the calling
+        view still has something to persist as the assistant's reply.
+        """
+        mock_llm = MagicMock()
+        mock_get_llm.return_value = mock_llm
+        mock_llm.bind_tools.return_value = mock_llm
+        mock_llm.stream.side_effect = RuntimeError("simulated API failure")
+
+        result = list(ChatAgent(self.customer).invoke_stream("hi"))
+
+        self.assertEqual(len(result), 1)
+        self.assertIn("couldn't complete", result[0])
 
     @patch("chatbot.services.agent.get_llm")
     def test_invoke_stream_executes_tool_call_without_yielding_text(

@@ -1,3 +1,5 @@
+import logging
+
 from langchain.tools import tool
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 
@@ -9,6 +11,8 @@ from .tools.knowledge import knowledge_base_search
 from .tools.product_tool import product_details, product_search
 from .tools.recommendations import get_recommended_products_for_customer, similar_products
 from .tools.reviews import product_reviews
+
+logger = logging.getLogger(__name__)
 
 
 class ChatAgent:
@@ -105,6 +109,31 @@ class ChatAgent:
         return [list_my_orders, get_order_details]
 
     def invoke(self, message: str, history: list | None = None):
+        """
+        Never raises: any failure talking to the model or running a tool
+        falls back to a friendly message instead of leaving the caller's
+        already-persisted user message with no reply, or bubbling up as
+        a raw 500.
+        """
+        try:
+            return self._run_invoke_loop(message, history)
+        except Exception:
+            logger.exception("ChatAgent.invoke failed")
+            return self._exhausted_message()
+
+    def invoke_stream(self, message: str, history: list | None = None):
+        """
+        Streaming counterpart to invoke() -- same never-raises guarantee,
+        yielding the fallback message as a final chunk on failure instead
+        of letting the exception propagate out of the generator.
+        """
+        try:
+            yield from self._run_stream_loop(message, history)
+        except Exception:
+            logger.exception("ChatAgent.invoke_stream failed")
+            yield self._exhausted_message()
+
+    def _run_invoke_loop(self, message: str, history: list | None):
         messages = self._build_messages(message, history)
 
         for _ in range(self.MAX_TOOL_ITERATIONS):
@@ -118,11 +147,11 @@ class ChatAgent:
 
         return self._exhausted_message()
 
-    def invoke_stream(self, message: str, history: list | None = None):
+    def _run_stream_loop(self, message: str, history: list | None):
         """
-        Same tool-calling loop as invoke(), but yields the final text
-        answer as it streams in, chunk by chunk. Tool-calling turns
-        never yield anything visible, since a turn's `.content` is
+        Same tool-calling loop as _run_invoke_loop(), but yields the
+        final text answer as it streams in, chunk by chunk. Tool-calling
+        turns never yield anything visible, since a turn's `.content` is
         empty whenever the model responds with tool_calls instead of
         text (confirmed against the real API).
         """
