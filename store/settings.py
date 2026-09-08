@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
 from pathlib import Path
+
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -25,11 +27,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
+if not DEBUG and (not SECRET_KEY or 'django-insecure' in SECRET_KEY):
+    raise ImproperlyConfigured(
+        'SECRET_KEY is missing or is still Django\'s auto-generated '
+        'insecure default. Generate a real secret key and set it via the '
+        'SECRET_KEY environment variable before running with DEBUG=False.'
+    )
+
 if DEBUG:
     ALLOWED_HOSTS = []
 else:
-
-    ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
+    ALLOWED_HOSTS = [
+        host for host in os.getenv('ALLOWED_HOSTS', '').split(',') if host
+    ]
 
 
 # Application definition
@@ -86,15 +96,16 @@ WSGI_APPLICATION = 'store.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+DB_ENGINE = os.getenv('DB_ENGINE', 'mysql')
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
+        'ENGINE': f'django.db.backends.{DB_ENGINE}',
         'NAME': os.getenv('NAME'),
         'HOST': os.getenv('HOST'),
         'USER': os.getenv('USER'),
-        'PASSWORD': os.getenv('PASSWORD')
-
+        'PASSWORD': os.getenv('PASSWORD'),
+        'PORT': os.getenv('DB_PORT', ''),
     }
 }
 
@@ -134,6 +145,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -164,11 +176,11 @@ DJOSER = {
     'USER_CREATE_PASSWORD_RETYPE': True,
     'SEND_ACTIVATION_EMAIL': True,
     'ACTIVATION_URL': 'activate/{uid}/{token}',
-    
+
     'EMAIL_FRONTEND_PROTOCOL': os.getenv('EMAIL_FRONTEND_PROTOCOL'),
     'EMAIL_FRONTEND_DOMAIN': os.getenv('EMAIL_FRONTEND_DOMAIN'),
     'EMAIL_FRONTEND_SITE_NAME': os.getenv('EMAIL_FRONTEND_SITE_NAME'),
-    
+
     'SERIALIZERS':{
          'user_create_password_retype': 'users.serializers.UserCreateSerializer',
          'current_user': 'users.serializers.UserSerializer',
@@ -182,7 +194,13 @@ CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:63
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
+    origin
+    for origin in os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173').split(',')
+    if origin
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    origin for origin in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if origin
 ]
 
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
@@ -194,3 +212,16 @@ CACHES = {
         'LOCATION': os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0'),
     }
 }
+
+# Production hardening -- inert during local dev (DEBUG=True). Assumes a
+# standard reverse-proxy/PaaS setup that terminates TLS and forwards the
+# original protocol via X-Forwarded-Proto; remove SECURE_PROXY_SSL_HEADER
+# if Django itself terminates TLS directly.
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 60 * 60 * 24 * 7  # 1 week; raise once confirmed working
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
