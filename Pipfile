@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 django = "*"
 mysqlclient = "*"
+psycopg = {extras = ["binary"], version = "*"}
 djangorestframework = "*"
 django-filter = "*"
 drf-nested-routers = "*"
@@ -23,6 +24,7 @@ google-genai = "*"
 langchain-google-genai = "*"
 langchain = "*"
 python-dotenv = "*"
+gunicorn = "*"
 
 [dev-packages]
 faker = "*"
