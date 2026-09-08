@@ -61,11 +61,13 @@ INSTALLED_APPS = [
     'chatbot',
     'django_celery_beat',
     'corsheaders',
+    'storages',
 ]
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -149,6 +151,40 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Media uploads (product/customer images) go to Supabase Storage's
+# S3-compatible bucket in production; local dev keeps using the filesystem
+# above so no bucket credentials are needed to run the app locally.
+USE_S3_MEDIA = os.getenv('USE_S3_MEDIA', 'False') == 'True'
+
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+    },
+}
+
+if USE_S3_MEDIA:
+    STORAGES['default'] = {
+        'BACKEND': 'storages.backends.s3.S3Storage',
+    }
+    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
+    # Supabase's S3-compatible endpoint, e.g.
+    # https://<project-ref>.supabase.co/storage/v1/s3
+    AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL')
+    AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'us-east-1')
+    # Supabase's S3 gateway requires path-style bucket addressing rather
+    # than AWS's default virtual-hosted-style.
+    AWS_S3_ADDRESSING_STYLE = 'path'
+    # Public/private access is controlled by the bucket's own policy in
+    # Supabase, not per-object ACL headers.
+    AWS_DEFAULT_ACL = None
+    AWS_QUERYSTRING_AUTH = False
+    AWS_S3_FILE_OVERWRITE = False
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

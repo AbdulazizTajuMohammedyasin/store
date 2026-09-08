@@ -25,6 +25,8 @@ langchain-google-genai = "*"
 langchain = "*"
 python-dotenv = "*"
 gunicorn = "*"
+whitenoise = "*"
+django-storages = {extras = ["s3"], version = "*"}
 
 [dev-packages]
 faker = "*"
