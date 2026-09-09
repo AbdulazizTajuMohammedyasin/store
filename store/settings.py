@@ -230,8 +230,10 @@ DJOSER = {
     }
 }
 
-CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', REDIS_URL)
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', REDIS_URL)
 
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
@@ -251,7 +253,7 @@ REVIEW_SUMMARY_CACHE_TTL = int(os.getenv('REVIEW_SUMMARY_CACHE_TTL', 3600))
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0'),
+        'LOCATION': REDIS_URL,
     }
 }
 
