@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 
 from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
@@ -185,6 +186,11 @@ if USE_S3_MEDIA:
     AWS_DEFAULT_ACL = None
     AWS_QUERYSTRING_AUTH = False
     AWS_S3_FILE_OVERWRITE = False
+
+    _supabase_host = urlparse(AWS_S3_ENDPOINT_URL).netloc
+    AWS_S3_CUSTOM_DOMAIN = (
+        f'{_supabase_host}/storage/v1/object/public/{AWS_STORAGE_BUCKET_NAME}'
+    )
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
